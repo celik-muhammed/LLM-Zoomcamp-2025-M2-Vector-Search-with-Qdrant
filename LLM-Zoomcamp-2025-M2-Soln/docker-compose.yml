@@ -2,11 +2,25 @@
 version: "3.8"
 
 services:
-
+  # Generic Qdrant container (no user override, default root)
   qdrant:
     image: qdrant/qdrant
+    container_name: qdrant-default
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC API
     volumes:
-      - ./qdrant_storage:/qdrant/storage:z
+      - ./qdrant_storage:/qdrant/storage:rw  # Use :rw for compatibility; avoid :z unless SELinux is needed
+    restart: unless-stopped
+
+  # Qdrant container for Linux hosts, avoids root file ownership by using host UID/GID
+  qdrant-linux:
+    image: qdrant/qdrant
+    container_name: qdrant-linux-main
+    user: "${UID}:${GID}"  # Reads from .env — maps host user into container to avoid permission issues
+    ports:
+      - "6335:6333"  # Use different ports to avoid clash with qdrant-default
+      - "6336:6334"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage:rw  # Use rw mount to avoid SELinux issues on most systems
+    restart: unless-stopped
